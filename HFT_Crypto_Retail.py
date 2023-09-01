@@ -171,14 +171,25 @@ def calculate_transaction_cost(usdt, eth_usdt_ask, btc_usdt_bid, eth_btc_bid):
 # Iterate over the minimum length of the dataframes
 min_length = min(len(df_ethusdt), len(df_btcusdt), len(df_ethbtc))
 
+def is_arbitrage_opportunity_profitable(eth_usdt_ask, btc_usdt_bid, eth_btc_bid, fee=0.001, vol=slippage):
+    eth_usdt_ask_with_costs = eth_usdt_ask * (1 + fee + vol)
+    eth_btc_bid_with_costs = eth_btc_bid * (1 - fee - vol)
+    btc_usdt_bid_with_costs = btc_usdt_bid * (1 - fee - vol)
+    
+    arbitrage_opportunity = eth_usdt_ask_with_costs * eth_btc_bid_with_costs < btc_usdt_bid_with_costs
+    
+    return arbitrage_opportunity
+
 for i in range(min_length):
     eth_usdt_ask = float(df_ethusdt.iloc[i]['asks'][0][0]) if len(df_ethusdt.iloc[i]['asks']) > 0 else 0
     btc_usdt_bid = float(df_btcusdt.iloc[i]['bids'][0][0]) if len(df_btcusdt.iloc[i]['bids']) > 0 else 0
     eth_btc_bid = float(df_ethbtc.iloc[i]['bids'][0][0]) if len(df_ethbtc.iloc[i]['bids']) > 0 else 0
-    
+
     if eth_usdt_ask > 0 and btc_usdt_bid > 0 and eth_btc_bid > 0:
-        arbitrage_counter += 1
-        
+        if is_arbitrage_opportunity_profitable(eth_usdt_ask, btc_usdt_bid, eth_btc_bid):
+            arbitrage_counter += 1
+
+        # Le reste de votre logique originale
         investment = capital * investment_fraction
         investment_without_TC = capital_without_TC * investment_fraction
         investment_without_TC_and_vol = capital_without_TC_and_vol * investment_fraction
@@ -194,10 +205,10 @@ for i in range(min_length):
         capital_evolution.append(capital)
         capital_evolution_without_TC.append(capital_without_TC)
         capital_evolution_without_TC_and_vol.append(capital_without_TC_and_vol)
-        
+
         cost_this_step = calculate_transaction_cost(investment, eth_usdt_ask, btc_usdt_bid, eth_btc_bid)
         transaction_costs_cumulative.append(transaction_costs_cumulative[-1] + cost_this_step)
-
+        
 # Results
 print(f'Final capital: {capital} USDT')
 print(f'Final capital (without transaction costs): {capital_without_TC} USDT')
